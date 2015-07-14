@@ -7,7 +7,7 @@
  ************************************************************************/
 #include <iostream>
 #include "StringUtil.h"
-
+#include <algorithm>
 std::string& normalize(std::string& str)
 {
 	boost::trim(str);
@@ -29,7 +29,7 @@ std::string& normalize(std::string& str)
 			lastPos = i +1;
 		}
 	}
-	nstr += std::string(pos + lastPos);
+   nstr += std::string(pos + lastPos);
    str = nstr;
    boost::trim(str);
    boost::to_lower(str);
@@ -51,7 +51,7 @@ void removeDuplicate(StringVector& strs)
 		if(sstrs[i] == sstrs[i+1])
 		{
 			rstr = sstrs[i];
-			isPeplicate = true;
+			isReplicate = true;
 		}
 		else
 		{
@@ -84,7 +84,7 @@ void removeDuplicate(FreqStringVector& fstrs,bool keepOrder)
 	{
 		std::sort(fstrs.begin(),fstrs.end(),FreqString::nameComparator);
 		//find dedup,
-		for(std::size_t i = 1; i < fstrs; ++i)
+		for(std::size_t i = 1; i < fstrs.size(); ++i)
 		{
 			if(fstrs[i-1].getString() == fstrs[i].getString())
 			{
@@ -165,12 +165,13 @@ void removeItem(FreqStringVector& strs,const std::string& str)
 	resize(strs);
 }
 
+//resize the string vector
 void resize(FreqStringVector& strs)
 {
 	std::size_t j = 0;
 	for(std::size_t i = 0;i < strs.size(); ++i)
 	{
-		if(!strs.isRemoved())
+		if(!strs[i].isRemoved())
 		{
 			if( i == j)
 				j++;
@@ -185,34 +186,111 @@ void resize(FreqStringVector& strs)
 	strs.resize(j);
 }
 
+//caculate blank number
 int nBlank(const std::string& str)
 {
+	const char* pos = str.c_str();
+	std::size_t n = 0;
+	for(std::size_t i = 0;i < str.size();++i,pos++)
+	{
+		if(' ' == *pos)
+			n++;
+	}
+	return n;
 }
 
+//give a string find it's id,but haven't been used temporary!!
 int strToInt(const std::string& str,boost::bimap<int,std::string>& bm)
 {
 }
 
+//give an int(id) find it's string,but haven't been used temporary!!
 std::string intToStr(int n, boost::bimap<int,std::string>& bm)
 {
 }
 
-bool isEnglish(const std::string& usrQuery)
+//check the input wheather a english string
+bool isEnglish(const std::string& userQuery)
 {
+	const char* pos = userQuery.c_str();
+	bool ret = true;
+	for(std::size_t i = 0;i < userQuery.size();++i,pos++)
+	{
+		if(isblank(*pos) || isalpha(*pos))
+			continue;
+		else
+		{
+			ret = false;
+			break;
+		}
+	}
+	return ret;
 }
 
-void removeSpace(const std::string& src,const std::string& tar)
+//remove space in src
+void removeSpace(const std::string& src,std::string& tar)
 {
+	for(std::size_t i = 0; i < src.size();++i)
+	{
+		if(!isspace(src[i]))
+			tar += src[i];
+	}
 }
 
+//find the max feqstring class object,
 FreqString max(FreqStringVector& v)
 {
+	FreqString max("",0);
+	for(std::size_t i = 0;i < v.size();++i)
+	{
+		if(max < v[i])
+			max = v[i];
+	}
+	return max;
 }
 
 int editDistance(const std::string& sstr,const std::string& tstr)
 {
+	int n = sstr.length();
+	int m = tstr.length();
+	
+	if(0 == n) return m;
+	if(0 == m) return n;
+
+	typedef std::vector<std::vector<int> > Tmatrix;
+	Tmatrix matrix(n+1);
+
+	//initial the matrix (n+1)*(m+1)
+	for(int i = 0; i <= n; ++i) matrix[i].resize(m+1);
+	for(int i = 1; i <= n; ++i) matrix[i][0] = i;
+	for(int i = 1; i <= m; ++i) matrix[0][i] = i;
+
+	//caculate
+	for(int i = 1; i <= n; ++i)
+	{
+		const char si = sstr[i-1];
+		int cost; //penalty
+		for(int j = 1; j <= m; ++j)
+		{
+			const char tj = tstr[j-1];
+			if(si == tj)
+			{
+				cost = 0;
+			}
+			else
+			{
+				cost = 1; 
+			}
+			const int above = matrix[i-1][j] + 1; //above (i,j)
+			const int left = matrix[i][j-1] + 1; //lesf (i.j)
+			const int diag = matrix[i-1][j-1] + cost; //diagonal elements
+			matrix[i][j] = std::min(above,std::min(left,diag));
+		}
+	}
+	return matrix[n][m];
 }
 
+//sorted by edit distance
 void tuneByEditDistance(FreqStringVector& vector,const std::string& str)
 {
 }

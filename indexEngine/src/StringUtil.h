@@ -16,7 +16,7 @@
 
 #include <boost/bimap.hpp>
 
-typedef std::vector<std::sting> StringVector;
+typedef std::vector<std::string> StringVector;
 
 //string with frequence
 class FreqString
@@ -36,7 +36,7 @@ class FreqString
 
 		//construct3
 		FreqString(const std::string &str,float freq,std::size_t pos)
-			:str_(str).freq_(freq),pos_(pos)
+			:str_(str),freq_(freq),pos_(pos)
 		{
 		}
 		
@@ -89,7 +89,7 @@ class FreqString
 		{
 			str_ = fstr.str_;
 			freq_ = fstr.freq_;
-			pos_ = fstr.pos;
+			pos_ = fstr.pos_;
 
 			return *this;
 		}
@@ -103,7 +103,7 @@ class FreqString
 		//set this pos to npos
 		bool isRemoved() const
 		{
-			return pos_ = std::numeric_limits<std::size_t>::max();
+			return pos_ == std::numeric_limits<std::size_t>::max();
 		}
 
 		//compare by frequency
