@@ -7,7 +7,7 @@
  ************************************************************************/
 #include <iostream>
 #include "StringUtil.h"
-#include <algorithm>
+
 std::string& normalize(std::string& str)
 {
 	boost::trim(str);
@@ -287,7 +287,10 @@ int editDistance(const std::string& sstr,const std::string& tstr)
 			matrix[i][j] = std::min(above,std::min(left,diag));
 		}
 	}
-	return matrix[n][m];
+	if(isEnglish(sstr) && isEnglish(tstr))
+		return matrix[n][m];
+	else
+		return matrix[n][m] / 3;
 }
 
 //sorted by edit distance
