@@ -36,13 +36,60 @@ indexEngine::~indexEngine()
 		delete tok_;
 }
 
-void indexEngine::insert(const QueryData& userQuery)
+void indexEngine::insert(QueryData& userQuery)
 {
+	if(0 == userQuery.text.length())
+		return;
+	
+	std::size_t queryID = izenelib::util::izene_hashing(userQuery.text);
+	boost::unordered_map<std::size_t,QueryData>::iterator queryIter;
+	queryIter = queryIdata_.find(queryID);
+	if(queryIdata_.end() != queryIter && queryIter->second.text == userQuery.text)
+	{
+		queryIter->second.hits = userQuery.hits;
+		return;
+	}
+	else
+	{
+	//generated terms id
+	if(1 > userQuery.tid.size())
+	{
+		vector<pair<std::string,float> > segTerms;
+		segTerms.clear();
+		try
+		{
+			tok_->tokenize(userQuery.text,segTerms);
+		}
+		catch(...)
+		{
+			segTerms.clear();
+		}
+
+	//dedup terms
+	vector<std::size_t> termsIdVector;
+	String2IntMap termsMap;
+	String2IntMapIter termsMapIter;
+	for(std::size_t i = 0; i < segTerms.size(); ++i)
+	{
+		termsMapIter = termsMap.find(segTerms[i].first);
+		if(termsMap.end() == termsMapIter)
+		{
+			std::size_t termID = izenelib::util::izene_hashing(segTerms[i].first);
+			termsIdVector.push_back(termID);
+			termsMap.insert(make_pair(segTerms[i].first,queryID));
+		}
+	}
+	userQuery.tid = termsIdVector;
+	}
+	queryIdata_.insert(make_pair(queryID,userQuery));
+	}
 }
 
-void indexEngine::search(const std::string& userQuery,uint32_t Topk)
+//get candicate query id
+/*void indexEngine::search(const std::string& userQuery,Terms2QidMap& CandicateQid)
 {
-}
+
+}*/
 
 void indexEngine::indexing(const std::string& corpus_pth)
 {
@@ -82,7 +129,9 @@ void indexEngine::indexing(const std::string& corpus_pth)
 		qDat.counts = atoi(splitDat[3].c_str());//results numbers
 
 		//get term id
-		vector<pair<string,float> > segTerms;
+		String2IntMap termsVector;
+		tokenTerms(qDat.text,termsVector);
+	/*	vector<pair<std::string,float> > segTerms;
 		segTerms.clear();
 		try
 		{
@@ -94,8 +143,8 @@ void indexEngine::indexing(const std::string& corpus_pth)
 		}
 
 		std::size_t queryID = izenelib::util::izene_hashing(qDat.text);
-		boost::unordered_map<std::string,unsigned int> termsVector;
-		boost::unordered_map<std::string,unsigned int>::iterator termsIter;
+		String2IntMap termsVector;
+		boost::unordered_map<std::string,std::size_t>::iterator termsIter;
 		//dedup terms
 		for(std::size_t i = 0; i < segTerms.size(); ++i)
 		{
@@ -103,31 +152,32 @@ void indexEngine::indexing(const std::string& corpus_pth)
 			if(termsVector.end() == termsIter) //not found
 			{
 				termsVector.insert(make_pair(segTerms[i].first,queryID)); //insert terms ,it's query ID
-				std::cout << "Terms:" << segTerms[i].first << "\tquery ID:" << queryID << std::endl;
+				//std::cout << "Terms:" << segTerms[i].first << "\tquery ID:" << queryID << std::endl;
 			}
-		}
-
-		vector<uint32_t> queryIdVector;
-		vector<uint32_t> termsIdVector;
-		boost::unordered_map<uint32_t,vector<uint32_t> >::iterator termsQueryIter;
+		}*/
+		std::size_t queryID = izenelib::util::izene_hashing(qDat.text);
+		vector<std::size_t> queryIdVector;
+		vector<std::size_t> termsIdVector;
+		boost::unordered_map<std::size_t,vector<std::size_t> >::iterator termsQueryIter;
 
 		queryIdVector.push_back(queryID);
+		String2IntMapIter termsIter;
 		//assign hash id for every terms
 		for(termsIter = termsVector.begin(); termsIter != termsVector.end(); ++termsIter)
 		{
-			std::size_t termsID = izenelib::util::izene_hashing(termsIter->first);
+			//std::size_t termsID = izenelib::util::izene_hashing(termsIter->first);
 			//termsIdVector.push_back(termsID);
-			termsIdVector.push_back(termsID);
+			termsIdVector.push_back(termsIter->second);
 			//find terms in dictornary,termsID.v
-			termsQueryIter = terms2qIDs_.find(termsID);
+			termsQueryIter = terms2qIDs_.find(termsIter->second);
 			if(termsQueryIter != terms2qIDs_.end())
 			{
-				termsQueryIter->second.push_back(termsIter->second); 
+				termsQueryIter->second.push_back(queryID); 
 			}
 			else
 			{
 				//queryIdVector.push_back(termsIter->second); //query id
-				terms2qIDs_.insert(make_pair(termsID,queryIdVector));
+				terms2qIDs_.insert(make_pair(termsIter->second,queryIdVector));
 			}
 		}
 
@@ -143,7 +193,22 @@ void indexEngine::indexing(const std::string& corpus_pth)
 		 }
 		 ofQueryDat_ << std::endl;
 		*/ 
-		queryIdata_.insert(make_pair(queryID,qDat));
+		
+		//merge the searching times
+		boost::unordered_map<std::size_t,QueryData>::iterator queryIter;
+		queryIter = queryIdata_.find(queryID);
+		if(queryIdata_.end() != queryIter && queryIter->second.text == qDat.text)
+		{
+			std::cout << "queryIter->seoncd.text:" << queryIter->second.text << 
+				"\t qDat.text:" << qDat.text << std::endl;
+			//std::cout << "queryID:" << queryID << "\tqueryIter->first:" << queryIter->first << std::endl; 
+			//std::cout << "\t text:" << qDat.text << std::endl;	
+			queryIter->second.hits += qDat.hits;
+			//std::cout  << "test--hits:" << queryIter->second.hits << "\t qdat.hits:" << qDat.hits << std::endl; 	
+		}
+		else
+			queryIdata_.insert(make_pair(queryID,qDat));
+		//queryIdata_.insert(make_pair(queryID,qDat));
 	}
 	ifOrigin_data.close();//file stream close
 }
@@ -155,7 +220,7 @@ void indexEngine::open()
 void indexEngine::flush()
 {
 	//flush query data to disk,queryDat.v
-	boost::unordered_map<uint32_t,QueryData>::iterator queryIter;
+	boost::unordered_map<std::size_t,QueryData>::iterator queryIter;
 	for(queryIter = queryIdata_.begin(); queryIter != queryIdata_.end(); ++queryIter)
 	{
 		ofQueryDat_ << queryIter->first << "\t" << queryIter->second.text << "\t"
@@ -167,20 +232,19 @@ void indexEngine::flush()
 		ofQueryDat_ << std::endl;
 	}
 
-
 	//flush terms id,candicate query id to disk,termsId.v
-	boost::unordered_map<uint32_t,vector<uint32_t> >::iterator termsQueryIter;
+	boost::unordered_map<std::size_t,vector<std::size_t> >::iterator termsQueryIter;
 	for(termsQueryIter = terms2qIDs_.begin(); termsQueryIter != terms2qIDs_.end(); ++termsQueryIter)
 	{
-		std::cout << "Terms:" << termsQueryIter->first << std::endl;
-		std::cout << "\tQuery id:" << std::endl;
+		//std::cout << "Terms:" << termsQueryIter->first << std::endl;
+		//std::cout << "\tQuery id:" << std::endl;
 		ofTermsId_ << termsQueryIter->first << "\t";
 		for(unsigned int i = 0; i < termsQueryIter->second.size(); ++i)
 		{
-			std::cout << termsQueryIter->second[i] << ",";
+		//	std::cout << termsQueryIter->second[i] << ",";
 			ofTermsId_ << termsQueryIter->second[i] << "\t";
 		}
-		std::cout << std::endl;
+		//std::cout << std::endl;
 		ofTermsId_ << std::endl;
 	}
 }
@@ -197,3 +261,33 @@ bool indexEngine::isUpdate()
 {
 }
 
+//return terms and it's hash value
+void indexEngine::tokenTerms(const std::string& userQuery,String2IntMap& termsMap)
+{
+	if(0 == userQuery.length())
+		return;
+	termsMap.clear();
+	vector<pair<std::string,float> > segTerms;
+	try
+	{
+		tok_->tokenize(userQuery,segTerms);
+	}
+	catch(...)
+	{
+		segTerms.clear();
+	}
+
+	//dedup
+	String2IntMapIter termsMapIter;
+	for(std::size_t i = 0; i < segTerms.size(); ++i)
+	{
+		termsMapIter = termsMap.find(segTerms[i].first);
+		if(termsMap.end() != termsMapIter && termsMapIter->first == segTerms[i].first)
+			continue;
+		else
+		{
+			std::size_t termsID = izenelib::util::izene_hashing(segTerms[i].first);
+			termsMap.insert(make_pair(segTerms[i].first,termsID));
+		}
+	}
+}

@@ -17,7 +17,7 @@ int main()
 	indexEngine mIndex(pth);
 
 	string corpus = "query.txt";
-
+	//string corpus = "/home/lscm/mproj/workproj/kuaipan/dictionary/corpus/query.txt";
 	mIndex.indexing(corpus);
 	mIndex.flush();
 	mIndex.close();

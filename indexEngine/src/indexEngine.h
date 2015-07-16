@@ -21,6 +21,11 @@
 #include "StringUtil.h"
 
 
+//
+typedef boost::unordered_map<std::string,std::size_t> String2IntMap;
+typedef boost::unordered_map<std::string,std::size_t>::iterator String2IntMapIter;
+typedef boost::unordered_map<std::size_t,vector<std::size_t> > Terms2QidMap;
+
 //structure in corpus
 //query text \t hits \t count \t terms id
 struct QueryData
@@ -29,8 +34,11 @@ struct QueryData
 	std::size_t hits; //searching times
 	std::size_t counts; //searching results
 	
-	vector<uint32_t> tid; //terms hash value
+	vector<std::size_t> tid; //terms hash value
 };
+
+typedef boost::unordered_map<std::size_t,QueryData> QueryIdataMap;
+typedef boost::unordered_map<std::size_t,QueryData>::iterator QueryIdataIter;
 
 class indexEngine
 {
@@ -42,17 +50,20 @@ class indexEngine
 
 	public:
 		void close();
-		void insert(const QueryData& userQuery); //insert an userQuery
+		void insert(QueryData& userQuery); //insert an userQuery
 		void search(const std::string& userQuery,uint32_t TopK);//search query
 		void indexing(const std::string& corpus_pth);
+		void tokenTerms(const string&, String2IntMap&);
 		void flush();
 		void open(); //open disk file
 		bool isUpdate();
 
 
 	private:
-		boost::unordered_map<uint32_t,vector<uint32_t> > terms2qIDs_;// terms and query id contain thisterm
-		boost::unordered_map<uint32_t,QueryData> queryIdata_; //query id ,complete data
+		//boost::unordered_map<uint32_t,vector<uint32_t> > terms2qIDs_;// terms and query id contain thisterm
+		//boost::unordered_map<uint32_t,QueryData> queryIdata_; //query id ,complete data
+		Terms2QidMap terms2qIDs_;
+		QueryIdataMap queryIdata_;
 		std::string dir_; //tokenize dictionary path
 		ilplib::knlp::HorseTokenize *tok_;
 
