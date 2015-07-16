@@ -15,13 +15,21 @@ int main()
 
 	cout << "Start indexing..." << endl;
 	indexEngine mIndex(pth);
-
+	QueryData mdat;
+	mdat.text = "TCL 32英寸";
+	mdat.hits = 12;
+	mdat.counts = 2400;
 	string corpus = "query.txt";
 	//string corpus = "/home/lscm/mproj/workproj/kuaipan/dictionary/corpus/query.txt";
 	mIndex.indexing(corpus);
+	//mIndex.insert(mdat);
+	Terms2QidMap termsMap;
+	QueryIdataMap queryMap;
+	mIndex.search(mdat.text,termsMap,queryMap);
 	mIndex.flush();
 	mIndex.close();
 
+	cout << "test termsMap.size:" << termsMap.size() << "\tqueryMap.size:" << queryMap.size() << endl;
 	cout << "End process!" << endl;
 
 	return 0;

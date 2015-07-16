@@ -21,11 +21,13 @@
 #include "StringUtil.h"
 
 
-//
+//using in tokenize ,and assign hash value for terms
 typedef boost::unordered_map<std::string,std::size_t> String2IntMap;
 typedef boost::unordered_map<std::string,std::size_t>::iterator String2IntMapIter;
-typedef boost::unordered_map<std::size_t,vector<std::size_t> > Terms2QidMap;
 
+//
+typedef boost::unordered_map<std::size_t,vector<std::size_t> > Terms2QidMap;
+typedef boost::unordered_map<std::size_t,vector<std::size_t> >::iterator Terms2QidMapIter;
 //structure in corpus
 //query text \t hits \t count \t terms id
 struct QueryData
@@ -51,7 +53,7 @@ class indexEngine
 	public:
 		void close();
 		void insert(QueryData& userQuery); //insert an userQuery
-		void search(const std::string& userQuery,uint32_t TopK);//search query
+		void search(const std::string& userQuery,Terms2QidMap& candicateQids,QueryIdataMap& candicateQuery);//search query
 		void indexing(const std::string& corpus_pth);
 		void tokenTerms(const string&, String2IntMap&);
 		void flush();

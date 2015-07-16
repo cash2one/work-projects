@@ -54,42 +54,55 @@ void indexEngine::insert(QueryData& userQuery)
 	//generated terms id
 	if(1 > userQuery.tid.size())
 	{
-		vector<pair<std::string,float> > segTerms;
-		segTerms.clear();
-		try
-		{
-			tok_->tokenize(userQuery.text,segTerms);
-		}
-		catch(...)
-		{
-			segTerms.clear();
-		}
-
-	//dedup terms
-	vector<std::size_t> termsIdVector;
-	String2IntMap termsMap;
-	String2IntMapIter termsMapIter;
-	for(std::size_t i = 0; i < segTerms.size(); ++i)
-	{
-		termsMapIter = termsMap.find(segTerms[i].first);
-		if(termsMap.end() == termsMapIter)
-		{
-			std::size_t termID = izenelib::util::izene_hashing(segTerms[i].first);
-			termsIdVector.push_back(termID);
-			termsMap.insert(make_pair(segTerms[i].first,queryID));
-		}
-	}
-	userQuery.tid = termsIdVector;
+		String2IntMap termsMap;
+		String2IntMapIter termsMapIter;
+		vector<std::size_t> termsIdVector;
+		tokenTerms(userQuery.text,termsMap);
+		for(termsMapIter = termsMap.begin(); termsMapIter != termsMap.end(); ++termsMapIter)
+			termsIdVector.push_back(termsMapIter->second);
+		userQuery.tid = termsIdVector;
 	}
 	queryIdata_.insert(make_pair(queryID,userQuery));
 	}
 }
 
 //get candicate query id
-/*void indexEngine::search(const std::string& userQuery,Terms2QidMap& CandicateQid)
+void indexEngine::search(const std::string& userQuery,Terms2QidMap& candicateQid,QueryIdataMap& candicateQuery)
 {
+	std::cout << "test--\t";
+	if(0 == userQuery.length())
+		return;
+	candicateQid.clear();
+	candicateQuery.clear();
 
-}*/
+	String2IntMap termsMap;
+	String2IntMapIter termsMapIter;
+
+	tokenTerms(userQuery,termsMap);
+	Terms2QidMapIter termsQidIter;
+	//get candicate query id
+	for(termsMapIter = termsMap.begin(); termsMapIter != termsMap.end(); ++termsMapIter)
+	{
+		std::cout << "--test2--" << termsMapIter->second;
+		termsQidIter = terms2qIDs_.find(termsMapIter->second);
+		if(terms2qIDs_.end() != termsQidIter)
+		{
+			candicateQid.insert(make_pair(termsMapIter->second,termsQidIter->second));
+		}
+	}
+
+	QueryIdataIter queryIter; 
+	//get candicate query data
+	for(termsQidIter = candicateQid.begin(); termsQidIter != candicateQid.end(); ++termsQidIter)
+	{
+		for(std::size_t i = 0; i < termsQidIter->second.size(); ++i)
+		{
+			queryIter = queryIdata_.find(termsQidIter->second[i]);
+			if(queryIdata_.end() != queryIter)
+				candicateQuery.insert(make_pair(termsQidIter->second[i],queryIter->second));
+		}
+	}
+}
 
 void indexEngine::indexing(const std::string& corpus_pth)
 {
@@ -131,42 +144,17 @@ void indexEngine::indexing(const std::string& corpus_pth)
 		//get term id
 		String2IntMap termsVector;
 		tokenTerms(qDat.text,termsVector);
-	/*	vector<pair<std::string,float> > segTerms;
-		segTerms.clear();
-		try
-		{
-			tok_->tokenize(qDat.text,segTerms);
-		}
-		catch(...)
-		{
-			segTerms.clear();
-		}
-
-		std::size_t queryID = izenelib::util::izene_hashing(qDat.text);
-		String2IntMap termsVector;
-		boost::unordered_map<std::string,std::size_t>::iterator termsIter;
-		//dedup terms
-		for(std::size_t i = 0; i < segTerms.size(); ++i)
-		{
-			termsIter = termsVector.find(segTerms[i].first);
-			if(termsVector.end() == termsIter) //not found
-			{
-				termsVector.insert(make_pair(segTerms[i].first,queryID)); //insert terms ,it's query ID
-				//std::cout << "Terms:" << segTerms[i].first << "\tquery ID:" << queryID << std::endl;
-			}
-		}*/
+		
 		std::size_t queryID = izenelib::util::izene_hashing(qDat.text);
 		vector<std::size_t> queryIdVector;
 		vector<std::size_t> termsIdVector;
-		boost::unordered_map<std::size_t,vector<std::size_t> >::iterator termsQueryIter;
-
+		//boost::unordered_map<std::size_t,vector<std::size_t> >::iterator termsQueryIter;
+		Terms2QidMapIter termsQueryIter;
 		queryIdVector.push_back(queryID);
 		String2IntMapIter termsIter;
 		//assign hash id for every terms
 		for(termsIter = termsVector.begin(); termsIter != termsVector.end(); ++termsIter)
 		{
-			//std::size_t termsID = izenelib::util::izene_hashing(termsIter->first);
-			//termsIdVector.push_back(termsID);
 			termsIdVector.push_back(termsIter->second);
 			//find terms in dictornary,termsID.v
 			termsQueryIter = terms2qIDs_.find(termsIter->second);
@@ -176,7 +164,6 @@ void indexEngine::indexing(const std::string& corpus_pth)
 			}
 			else
 			{
-				//queryIdVector.push_back(termsIter->second); //query id
 				terms2qIDs_.insert(make_pair(termsIter->second,queryIdVector));
 			}
 		}
