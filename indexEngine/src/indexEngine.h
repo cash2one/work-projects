@@ -13,10 +13,13 @@
 #include <string>
 #include <fstream>
 
-#include <boost/unoreder_map.hpp>
+#include <boost/unordered_map.hpp>
+#include <boost/filesystem.hpp>
 #include <util/hashFunction.h>
 
 #include "knlp/horse_tokenize.h"
+#include "StringUtil.h"
+
 
 //structure in corpus
 //query text \t hits \t count \t terms id
@@ -24,9 +27,9 @@ struct QueryData
 {
 	std::string text; //qurey text
 	std::size_t hits; //searching times
-	std::size_t counts: //searching results
+	std::size_t counts; //searching results
 	
-	std::vector<uint32_t> tid; //terms hash value
+	vector<uint32_t> tid; //terms hash value
 };
 
 class indexEngine
@@ -38,22 +41,25 @@ class indexEngine
 		~indexEngine();
 
 	public:
-		void init(); //initial index engine,open 
+		void close();
 		void insert(const QueryData& userQuery); //insert an userQuery
-		void search();//search query
-		void indexing();
+		void search(const std::string& userQuery,uint32_t TopK);//search query
+		void indexing(const std::string& corpus_pth);
 		void flush();
 		void open(); //open disk file
 		bool isUpdate();
 
 
 	private:
-		boost::unorder_map<unsigned int,vector<unsigned int> > Terms2Qid_;// terms and query id contain thisterm
-		boost::unorder_map<unsigned int,QueryData> flush2Disk_;
+		boost::unordered_map<uint32_t,vector<uint32_t> > terms2qIDs_;// terms and query id contain thisterm
+		boost::unordered_map<uint32_t,QueryData> queryIdata_; //query id ,complete data
 		std::string dir_; //tokenize dictionary path
 		ilplib::knlp::HorseTokenize *tok_;
 
-}；
+		//flush to disk file stream
+		ofstream ofTermsId_;
+		ofstream ofQueryDat_;
+};
 
 
 
