@@ -108,14 +108,16 @@ void indexEngine::indexing(const std::string& corpus_pth)
 		}
 
 		vector<uint32_t> queryIdVector;
+		vector<uint32_t> termsIdVector;
 		boost::unordered_map<uint32_t,vector<uint32_t> >::iterator termsQueryIter;
+
+		queryIdVector.push_back(queryID);
 		//assign hash id for every terms
 		for(termsIter = termsVector.begin(); termsIter != termsVector.end(); ++termsIter)
 		{
-			queryIdVector.clear();
 			std::size_t termsID = izenelib::util::izene_hashing(termsIter->first);
 			//termsIdVector.push_back(termsID);
-			queryIdVector.push_back(queryID);
+			termsIdVector.push_back(termsID);
 			//find terms in dictornary,termsID.v
 			termsQueryIter = terms2qIDs_.find(termsID);
 			if(termsQueryIter != terms2qIDs_.end())
@@ -130,10 +132,10 @@ void indexEngine::indexing(const std::string& corpus_pth)
 		}
 
 		//complete data for one query
-		qDat.tid = queryIdVector;
+		qDat.tid = termsIdVector;
 		/*
 		 //flush to disk file
-		 ofQueryDat_ << queryID << "\t" << qDat.hits << "\t" << qDat.counts;
+		 ofQueryDat_ << queryID << "\t" <<qDat.text << "\t" << qDat.hits << "\t" << qDat.counts;
 		 for(unsigned int i = 0; i < qDat.tid.size(); ++i)
 		 {
 			ofQueryDat_ << "\t" << qDat.tid[i];
