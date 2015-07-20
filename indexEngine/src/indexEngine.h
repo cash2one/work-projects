@@ -69,10 +69,6 @@ class indexEngine
 		std::string dict_pth_;
 		ilplib::knlp::HorseTokenize *tok_;
 
-		//flush to disk file stream
-		ofstream ofTermsId_; //output terms id stream
-		ofstream ofQueryDat_; //output query data stream
-
 		bool isNeedflush;
 };
 

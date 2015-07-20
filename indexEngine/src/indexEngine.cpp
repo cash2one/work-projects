@@ -369,26 +369,31 @@ void indexEngine::flush()
 {
 	if(!isNeedflush)
 		return;
+	ofstream ofTermsId;
+	ofstream ofQueryDat;
+
 	std::string termId_pth =  dict_pth_ + "/termId.v";
 	std::string queryDat_pth = dict_pth_ + "/queryDat.v";
-	ofTermsId_.open(termId_pth.c_str(),ios::app);
-	if(!ofTermsId_.is_open())
+
+	ofTermsId.open(termId_pth.c_str(),ios::app);
+	if(!ofTermsId.is_open())
 		std::cerr << "Open termId dictionary failed!" << std::endl;
 
-	ofQueryDat_.open(queryDat_pth.c_str(),ios::app);
-	if(!ofQueryDat_.is_open())
+	ofQueryDat.open(queryDat_pth.c_str(),ios::app);
+	if(!ofQueryDat.is_open())
 		std::cerr << "Open queryDat dictionary failed!" << std::endl;
+
 	//flush query data to disk,queryDat.v
 	boost::unordered_map<std::size_t,QueryData>::iterator queryIter;
 	for(queryIter = queryIdata_.begin(); queryIter != queryIdata_.end(); ++queryIter)
 	{
-		ofQueryDat_ << queryIter->first << "\t" << queryIter->second.text << "\t"
+		ofQueryDat << queryIter->first << "\t" << queryIter->second.text << "\t"
 			        << queryIter->second.hits << "\t" << queryIter->second.counts;
 		for(unsigned int i = 0; i < queryIter->second.tid.size(); ++i)
 		{
-			ofQueryDat_ << "\t" << queryIter->second.tid[i];
+			ofQueryDat << "\t" << queryIter->second.tid[i];
 		}
-		ofQueryDat_ << std::endl;
+		ofQueryDat << std::endl;
 	}
 
 	//flush terms id,candicate query id to disk,termsId.v
@@ -397,23 +402,23 @@ void indexEngine::flush()
 	{
 		//std::cout << "Terms:" << termsQueryIter->first << std::endl;
 		//std::cout << "\tQuery id:" << std::endl;
-		ofTermsId_ << termsQueryIter->first << "\t";
+		ofTermsId << termsQueryIter->first << "\t";
 		for(unsigned int i = 0; i < termsQueryIter->second.size(); ++i)
 		{
 		//	std::cout << termsQueryIter->second[i] << ",";
-			ofTermsId_ << termsQueryIter->second[i] << "\t";
+			ofTermsId << termsQueryIter->second[i] << "\t";
 		}
 		//std::cout << std::endl;
-		ofTermsId_ << std::endl;
+		ofTermsId << std::endl;
 	}
+
+	ofTermsId.close();
+	ofQueryDat.close();
 }
 
 void indexEngine::close()
 {
 	tok_ = NULL;
-
-	ofQueryDat_.close();
-	ofTermsId_.close();
 }
 
 bool indexEngine::isUpdate()
