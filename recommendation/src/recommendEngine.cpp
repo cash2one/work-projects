@@ -7,7 +7,7 @@
  ************************************************************************/
 #include "recommendEngine.h"
 
-bool Is_subset(vector<std::size_t> v1,vector<std::size_t> v2);
+bool Is_subset(vector<std::size_t> v1,vector<std::size_t> v2,std::size_t& cnt);
 
 
 //construct,and initialize
@@ -62,7 +62,8 @@ void recommendEngine::recommendNoResults()
 	std::string res1 = "";
 	std::string res2 = "";
 	std::string big_term = "";
-	
+	std::size_t cnt = 0;
+
 	for(termsIter = termsIdMap.begin(); termsIter != termsIdMap.end(); ++termsIter)
 	{
 		if(big_term.length() < termsIter->first.length())
@@ -80,7 +81,8 @@ void recommendEngine::recommendNoResults()
 			//std::cout << "qTermsID size:" << qTermsID.size() << std::endl;
 			float weight = (float) queryIdata_[termsIdIter->second[i]].counts / (
 			queryIdata_[termsIdIter->second[i]].hits + (float)0.3*queryIdata_[termsIdIter->second[i]].counts);
-			if(Is_subset(termsID,qTermsID))
+		
+			if(Is_subset(termsID,qTermsID,cnt))
 			{
 				subset_flag = true;
 				float score = (float) weight * qTermsID.size();
@@ -88,7 +90,8 @@ void recommendEngine::recommendNoResults()
 				{
 					bigScore1 = score;  //score
 					res1 = queryIdata_[termsIdIter->second[i]].text; // query
-					std::cout << "subset score:" << bigScore1 << "\t query:" << res1 << std::endl;
+					std::cout << "contain terms NM:" << cnt
+						<< "\tsubset score:" << bigScore1 << "\t query:" << res1 << std::endl;
 				}
 			}
 			else
@@ -172,20 +175,25 @@ void recommendEngine::buildEngine()
 
 
 
-bool Is_subset(vector<std::size_t> v1,vector<std::size_t> v2)
+bool Is_subset(vector<std::size_t> v1,vector<std::size_t> v2,std::size_t& cnt)
 {
 	boost::unordered_map<std::size_t,std::size_t> sets;
 	boost::unordered_map<std::size_t,std::size_t>::iterator setIter;
 	sets.clear();
+	cnt = 0;
+	bool flag = true;
 	for(std::size_t i = 0; i < v1.size(); ++i)
 	{
 		sets.insert(make_pair(v1[i],1));
 	}
+	
 	for(std::size_t j = 0; j < v2.size(); ++j)
 	{
 		setIter = sets.find(v2[j]);
-		if(sets.end() == setIter)
-			return false;
+		if(sets.end() != setIter)
+			cnt += 1;
+		else
+			flag = false;
 	}
-	return true;
+	return flag;
 }

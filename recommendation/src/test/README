@@ -1,3 +1,9 @@
 1.Add a unit test,haven't completed
 
 2.Add a normal test for StringUtil
+
+3.test for index engine,run ./t_indexEngine
+
+4. Test for recommendEngine, run ./t_recommendEngine 我的POLO裙子
+
+
