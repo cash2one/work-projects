@@ -47,7 +47,8 @@ void recommendEngine::recommendNoResults()
 	//no candicate or no terms
 	if(0 == terms2qIDs_.size() || 0 == queryIdata_.size() || 0 == termsIdMap.size())
 		return;
-
+	std::cout << "tersm id size:" << terms2qIDs_.size() << "\tqueryIdata size:" << queryIdata_.size()
+			<< "\t input query terms size:" << termsIdMap.size() << std::endl;
 	vector<std::size_t> qTermsID;
 	vector<std::size_t> termsID;
 	String2IntMapIter termsIter;
@@ -71,9 +72,12 @@ void recommendEngine::recommendNoResults()
 
 	for(termsIdIter = terms2qIDs_.begin(); termsIdIter != terms2qIDs_.end(); ++termsIdIter)
 	{
+		//std::cout << "test1-" << termsIdIter->first <<"term query vector size:" << 
+		//	termsIdIter->second.size()<<std::endl;
 		for(std::size_t i = 0; i < termsIdIter->second.size(); ++i)
 		{
 			qTermsID = queryIdata_[termsIdIter->second[i]].tid;
+			//std::cout << "qTermsID size:" << qTermsID.size() << std::endl;
 			float weight = (float) queryIdata_[termsIdIter->second[i]].counts / (
 			queryIdata_[termsIdIter->second[i]].hits + (float)0.3*queryIdata_[termsIdIter->second[i]].counts);
 			if(Is_subset(termsID,qTermsID))
@@ -84,6 +88,7 @@ void recommendEngine::recommendNoResults()
 				{
 					bigScore1 = score;  //score
 					res1 = queryIdata_[termsIdIter->second[i]].text; // query
+					std::cout << "subset score:" << bigScore1 << "\t query:" << res1 << std::endl;
 				}
 			}
 			else
@@ -94,6 +99,7 @@ void recommendEngine::recommendNoResults()
 				{
 					bigScore2 = tscore;
 					res2 = queryIdata_[termsIdIter->second[i]].text; //get query 
+					std::cout << "Not subset score:" << bigScore2 << "\t query:" << res2 << std::endl;
 				}
 			}
 		}
@@ -115,6 +121,7 @@ void recommendEngine::recommendNoResults()
 	//check the suggestion
 	if(ss.length() <= 3 && b_score !=0)
 		ss = big_term;
+	std::cout << "input query:" << jsonResult << std::endl;
 	if(jsonResult == ss)
 		ss = "";
 	jsonResult = "{\"recommendation\":\"";
@@ -142,7 +149,10 @@ bool recommendEngine::isNeedBuild()
 	if(isNeedIndex)
 		return true;
 	else
+	{
+		std::cout << "do not need indexing!\n";
 		return false;
+	}
 }
 
 //final recommendation results

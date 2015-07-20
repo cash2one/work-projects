@@ -161,6 +161,7 @@ bool indexEngine::open()
 			}
 			//last one
 			termsIdVector.push_back(atoi(sLine.c_str()));
+			qDat.tid = termsIdVector;
 			queryIdata_.insert(make_pair(queryID,qDat));
 		}
 		
@@ -225,7 +226,7 @@ void indexEngine::insert(QueryData& userQuery)
 String2IntMap indexEngine::search(const std::string& userQuery,Terms2QidMap& candicateQid
 		,QueryIdataMap& candicateQuery)
 {
-	std::cout << "test--\t";
+	//std::cout << "test--\t";
 	if(0 != userQuery.length())
 	{
 	candicateQid.clear();
@@ -239,11 +240,16 @@ String2IntMap indexEngine::search(const std::string& userQuery,Terms2QidMap& can
 	//get candicate query id
 	for(termsMapIter = termsMap.begin(); termsMapIter != termsMap.end(); ++termsMapIter)
 	{
-		std::cout << "--test2--" << termsMapIter->second;
+		//std::cout << "--test2--"<<termsMapIter->first << "\tid:" << termsMapIter->second << std::endl;
 		termsQidIter = terms2qIDs_.find(termsMapIter->second);
 		if(terms2qIDs_.end() != termsQidIter)
 		{
-			candicateQid.insert(make_pair(termsMapIter->second,termsQidIter->second));
+			vector<std::size_t> v;
+			for(std::size_t i = 0;i < termsQidIter->second.size();++i)
+			{
+				v.push_back(termsQidIter->second[i]);
+			}
+			candicateQid.insert(make_pair(termsMapIter->second,v));
 		}
 	}
 
@@ -345,8 +351,8 @@ void indexEngine::indexing(const std::string& corpus_pth)
 		queryIter = queryIdata_.find(queryID);
 		if(queryIdata_.end() != queryIter && queryIter->second.text == qDat.text)
 		{
-			std::cout << "queryIter->seoncd.text:" << queryIter->second.text << 
-				"\t qDat.text:" << qDat.text << std::endl;
+			//std::cout << "queryIter->seoncd.text:" << queryIter->second.text << 
+			//	"\t qDat.text:" << qDat.text << std::endl;
 			//std::cout << "queryID:" << queryID << "\tqueryIter->first:" << queryIter->first << std::endl; 
 			//std::cout << "\t text:" << qDat.text << std::endl;	
 			queryIter->second.hits += qDat.hits;

@@ -9,14 +9,22 @@
 
 using namespace std;
 
-int main()
+int main(int argc, char* argv[])
 {
+	if(argc < 2)
+	
+	{
+		cout << "Usage: Please input query and  rerun the program!" << endl;
+		return -1;
+	}
+
 	cout << "Start recommend engine ..." << endl;
 	string pth = "/home/lscm/mproj/workproj/kuaipan/query_recomm_http/q_similar/dict";
 
 	cout << "Start indexing..." << endl;
 	recommendEngine mRecomm(pth,"../");
-    string s = "我的POLO裙子";
+    //string s = "我的POLO裙子";
+	string s = argv[1];
 	string res;
 	mRecomm.jsonResults(s,res);
 	cout << "recommend results:" << res << endl;
