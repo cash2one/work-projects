@@ -47,31 +47,33 @@ class indexEngine
 
 	public:
 
-		indexEngine(const std::string& dir);
+		indexEngine(const std::string& dir,const std::string& dict_pth);
 		~indexEngine();
 
 	public:
 		void close();
 		void insert(QueryData& userQuery); //insert an userQuery
-		void search(const std::string& userQuery,Terms2QidMap& candicateQids,QueryIdataMap& candicateQuery);//search query
+		String2IntMap search(const std::string& userQuery,Terms2QidMap& candicateQids
+				,QueryIdataMap& candicateQuery);//search query
 		void indexing(const std::string& corpus_pth);
-		void tokenTerms(const string&, String2IntMap&);
+		void tokenTerms(const std::string&, String2IntMap&);
 		void flush();
-		void open(); //open disk file
+		bool open(); //open disk file
 		bool isUpdate();
 
 
 	private:
-		//boost::unordered_map<uint32_t,vector<uint32_t> > terms2qIDs_;// terms and query id contain thisterm
-		//boost::unordered_map<uint32_t,QueryData> queryIdata_; //query id ,complete data
-		Terms2QidMap terms2qIDs_;
-		QueryIdataMap queryIdata_;
+		Terms2QidMap terms2qIDs_; //terms id ,and it's query id vector
+		QueryIdataMap queryIdata_; //query id ,query data
 		std::string dir_; //tokenize dictionary path
+		std::string dict_pth_;
 		ilplib::knlp::HorseTokenize *tok_;
 
 		//flush to disk file stream
-		ofstream ofTermsId_;
-		ofstream ofQueryDat_;
+		ofstream ofTermsId_; //output terms id stream
+		ofstream ofQueryDat_; //output query data stream
+
+		bool isNeedflush;
 };
 
 

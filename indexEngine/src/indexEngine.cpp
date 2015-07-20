@@ -7,9 +7,31 @@
  ************************************************************************/
 #include "indexEngine.h"
 
+
+//assistant function
+void splitByPattern(const std::string& str,char splitPattern,vector<std::string>& res)
+{
+	if(0 == str.length())
+		return;
+	res.clear();
+	std::size_t nPattern = std::count(str.begin(),str.end(),splitPattern);
+	std::string s = str;
+	while(nPattern--)
+	{
+		std::size_t pos = s.find(nPattern);
+		if(std::string::npos != pos)
+		{
+			std::string ss = s.substr(0,pos);
+			res.push_back(ss);
+			s.assign(s,pos+1,s.length()-1);
+		}
+	}
+	res.push_back(s);
+}
+
 //construct
-indexEngine::indexEngine(const std::string& dir)
-	:dir_(dir)
+indexEngine::indexEngine(const std::string& dir,const std::string& dict_pth)
+	:dir_(dir),dict_pth_(dict_pth),isNeedflush(false)
 {
 	if(!boost::filesystem::exists(dir_))
 	{
@@ -18,22 +40,139 @@ indexEngine::indexEngine(const std::string& dir)
 
 	//tokenizer
 	tok_ = new ilplib::knlp::HorseTokenize(dir_);
-
-	std::string termId_pth =  "../termId.v";
-	std::string queryDat_pth = "../queryDat.v";
-
-	ofTermsId_.open(termId_pth.c_str(),ios::app);
-	if(!ofTermsId_.is_open())
-		std::cerr << "Open termId dictionary failed!" << std::endl;
-	ofQueryDat_.open(queryDat_pth.c_str(),ios::app);
-	if(!ofQueryDat_.is_open())
-		std::cerr << "Open queryDat dictionary failed!" << std::endl;
 }
 
 indexEngine::~indexEngine()
 {
 	if(tok_)
 		delete tok_;
+}
+
+bool indexEngine::open()
+{
+	if(0 == dict_pth_.length())
+		return false;
+	std::string termId_pth =  dict_pth_ + "/termId.v";
+	std::string queryDat_pth = dict_pth_ + "/queryDat.v";
+	ifstream finTermsId;
+	ifstream finQueryDat;
+
+	std::size_t nTab = 0;
+	std::size_t pos = 0;
+	std::string sLine = "";
+	std::string s = "";
+
+	//open term id dictionary if exist , load data
+	finTermsId.open(termId_pth.c_str());
+	if(finTermsId.is_open())
+	{
+		vector<std::size_t> queryIdVector;
+		std::size_t termID;
+		while(getline(finTermsId,sLine))
+		{
+			queryIdVector.clear();
+			nTab = std::count(sLine.begin(),sLine.end(),'\t');
+			if(1 > nTab)
+				continue;
+			pos = sLine.find('\t');
+			if(std::string::npos != pos)
+			{
+				s = sLine.substr(0,pos);
+				termID = atoi(s.c_str());
+				sLine.assign(sLine,pos+1,sLine.length()-1);
+			}
+			nTab = nTab -1;
+			while(nTab--)
+			{
+				pos = sLine.find('\t');
+				if(std::string::npos != pos)
+				{
+					s = sLine.substr(0,pos);
+					sLine.assign(sLine,pos+1,sLine.length()-1);
+					termID = atoi(s.c_str());
+					queryIdVector.push_back(termID);
+				}
+				queryIdVector.push_back(atoi(sLine.c_str()));
+			}
+			terms2qIDs_.insert(make_pair(termID,queryIdVector));
+		}
+	}
+	finTermsId.close();
+	//open query data exist if exist , load data
+	finQueryDat.open(queryDat_pth.c_str());
+	if(finQueryDat.is_open())
+	{
+		QueryData qDat;
+		std::size_t queryID;
+		sLine = "";
+		s = "";
+		vector<std::size_t> termsIdVector;
+		while(getline(finQueryDat,sLine))
+		{
+			termsIdVector.clear();
+			qDat.tid.clear();
+			nTab = std::count(sLine.begin(),sLine.end(),'\t');
+			if(3 > nTab)
+				continue;
+
+			//get query id
+			pos = sLine.find('\t');
+			if(std::string::npos != pos)
+			{
+				s = sLine.substr(0,pos);
+				queryID = atoi(s.c_str());
+				sLine.assign(sLine,pos+1,sLine.length()-1);
+			}
+			//get query text
+			pos = sLine.find('\t');
+			if(std::string::npos != pos)
+			{
+				qDat.text = sLine.substr(0,pos);
+				sLine.assign(sLine,pos+1,sLine.length()-1);
+			}
+			//get query hits
+			pos = sLine.find('\t');
+			if(std::string::npos != pos)
+			{
+				
+				s = sLine.substr(0,pos);
+				qDat.hits = atoi(s.c_str());
+				sLine.assign(sLine,pos+1,sLine.length()-1);
+			}
+			//get query counts
+			pos = sLine.find('\t');
+			if(std::string::npos != pos)
+			{
+				s = sLine.substr(0,pos);
+				qDat.counts = atoi(s.c_str());
+				sLine.assign(sLine,pos+1,sLine.length()-1);
+			}
+			nTab = nTab - 4;
+			while(nTab--)
+			{
+				pos = sLine.find('\t');
+				if(std::string::npos != pos)
+				{
+					s = sLine.substr(0,pos);
+					std::size_t tID = atoi(s.c_str());
+					termsIdVector.push_back(tID);
+					sLine.assign(sLine,pos+1,sLine.length()-1);
+				}
+			}
+			//last one
+			termsIdVector.push_back(atoi(sLine.c_str()));
+			queryIdata_.insert(make_pair(queryID,qDat));
+		}
+		
+	}
+	finQueryDat.close();
+	if(0 == terms2qIDs_.size() || 0 == queryIdata_.size())
+	{
+		isNeedflush = true;
+		return false;
+	}
+	else 
+		return true; // load dictionary successfully!
 }
 
 void indexEngine::insert(QueryData& userQuery)
@@ -57,21 +196,38 @@ void indexEngine::insert(QueryData& userQuery)
 		String2IntMap termsMap;
 		String2IntMapIter termsMapIter;
 		vector<std::size_t> termsIdVector;
+		vector<std::size_t> queryIdVector;
+
+		Terms2QidMapIter termsIdIter;
+
 		tokenTerms(userQuery.text,termsMap);
 		for(termsMapIter = termsMap.begin(); termsMapIter != termsMap.end(); ++termsMapIter)
+		{
 			termsIdVector.push_back(termsMapIter->second);
+			termsIdIter = terms2qIDs_.find(termsMapIter->second);
+			//inset into terms dictionary
+			if(terms2qIDs_.end() != termsIdIter)
+				termsIdIter->second.push_back(queryID);
+			else
+			{
+				queryIdVector.push_back(queryID);
+				terms2qIDs_.insert(make_pair(termsMapIter->second,queryIdVector));
+			}
+		}
 		userQuery.tid = termsIdVector;
 	}
+	//insert in query data
 	queryIdata_.insert(make_pair(queryID,userQuery));
 	}
 }
 
 //get candicate query id
-void indexEngine::search(const std::string& userQuery,Terms2QidMap& candicateQid,QueryIdataMap& candicateQuery)
+String2IntMap indexEngine::search(const std::string& userQuery,Terms2QidMap& candicateQid
+		,QueryIdataMap& candicateQuery)
 {
 	std::cout << "test--\t";
-	if(0 == userQuery.length())
-		return;
+	if(0 != userQuery.length())
+	{
 	candicateQid.clear();
 	candicateQuery.clear();
 
@@ -101,6 +257,9 @@ void indexEngine::search(const std::string& userQuery,Terms2QidMap& candicateQid
 			if(queryIdata_.end() != queryIter)
 				candicateQuery.insert(make_pair(termsQidIter->second[i],queryIter->second));
 		}
+	}
+
+	return termsMap;
 	}
 }
 
@@ -200,12 +359,19 @@ void indexEngine::indexing(const std::string& corpus_pth)
 	ifOrigin_data.close();//file stream close
 }
 
-void indexEngine::open()
-{
-}
-
 void indexEngine::flush()
 {
+	if(!isNeedflush)
+		return;
+	std::string termId_pth =  dict_pth_ + "/termId.v";
+	std::string queryDat_pth = dict_pth_ + "/queryDat.v";
+	ofTermsId_.open(termId_pth.c_str(),ios::app);
+	if(!ofTermsId_.is_open())
+		std::cerr << "Open termId dictionary failed!" << std::endl;
+
+	ofQueryDat_.open(queryDat_pth.c_str(),ios::app);
+	if(!ofQueryDat_.is_open())
+		std::cerr << "Open queryDat dictionary failed!" << std::endl;
 	//flush query data to disk,queryDat.v
 	boost::unordered_map<std::size_t,QueryData>::iterator queryIter;
 	for(queryIter = queryIdata_.begin(); queryIter != queryIdata_.end(); ++queryIter)
