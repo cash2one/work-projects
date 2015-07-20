@@ -244,12 +244,12 @@ String2IntMap indexEngine::search(const std::string& userQuery,Terms2QidMap& can
 		termsQidIter = terms2qIDs_.find(termsMapIter->second);
 		if(terms2qIDs_.end() != termsQidIter)
 		{
-			vector<std::size_t> v;
+		/*	vector<std::size_t> v;
 			for(std::size_t i = 0;i < termsQidIter->second.size();++i)
 			{
 				v.push_back(termsQidIter->second[i]);
-			}
-			candicateQid.insert(make_pair(termsMapIter->second,v));
+			}*/
+			candicateQid.insert(make_pair(termsMapIter->second,termsQidIter->second));
 		}
 	}
 
