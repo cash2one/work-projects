@@ -127,8 +127,11 @@ void recommendEngine::recommendNoResults()
 	std::cout << "input query:" << jsonResult << std::endl;
 	if(jsonResult == ss)
 		ss = "";
-	jsonResult = "{\"recommendation\":\"";
+	jsonResult = "{\"recommendation\":{\"";
+	jsonResult = "noresults\":\"";
 	jsonResult += ss;
+	jsonResult += "\",\"";
+	jsonResult += "recommend\":";
 	jsonResult += "\"}";
 	
 	std::cout << "the most similar query is :" << jsonResult << "\t biggest score:" << b_score << std::endl;
@@ -148,13 +151,12 @@ void recommendEngine::recommend(const std::size_t TopK)
 
 	vector<std::size_t> qTermsID;
 	vector<std::size_t> termsID;
-	map<std::string,std::size_t> queryScoreMap;
+	map<std::string,float> queryScoreMap;
 
-	vector<PAIR> queryScoreVector;
 
 	qTermsID.clear();
 	termsID.clear();
-	queryVector.clear();
+	queryScoreMap.clear();
 
 	Terms2QidMapIter termsIdIter;
 	String2IntMapIter termsIter;
@@ -175,14 +177,15 @@ void recommendEngine::recommend(const std::size_t TopK)
 			Is_subset(termsID,qTermsID,cnt);
 
 			float weight = (float) cnt / (qTermsID.size() + 0.1) ;
-			bigScore = (float) weight * queryIdata_[termsIdIter->second[j]].hits;
+			queryScore = (float) weight * queryIdata_[termsIdIter->second[j]].hits;
 			queryText = queryIdata_[termsIdIter->second[j]].text;
-			queryScoreMap.insert(make_pair(queryText,bigScore));
+			queryScoreMap.insert(make_pair(queryText,queryScore));
+			std::cout << "query:" << queryText << "\tscore:" << queryScore << std::endl;
 		}
 	}
 
 	//get TopK 
-	queryScoreVector(queryScoreMap.begin(),queryScoreMap.end());
+    vector<PAIR> queryScoreVector(queryScoreMap.begin(),queryScoreMap.end());
 	sort(queryScoreVector.begin(),queryScoreVector.end(),cmpByValue());
 	std::size_t upperBound;
 	if(TopK < queryScoreVector.size())
@@ -190,7 +193,7 @@ void recommendEngine::recommend(const std::size_t TopK)
 	else
 		upperBound = queryScoreVector.size();
 	for(std::size_t i = 0; i < upperBound; ++i)
-		jsonResult += queryScoreVector[i].first;
+		jsonResult += "," + queryScoreVector[i].first;
 }
 
 //build index engine
@@ -211,7 +214,8 @@ bool recommendEngine::isNeedBuild()
 void recommendEngine::jsonResults(const std::string& userQuery,std::string& res)
 {
 	getCandicate(userQuery);
-	recommendNoResults();
+	//recommendNoResults();
+	recommend();
 	res = jsonResult;
 }
 
