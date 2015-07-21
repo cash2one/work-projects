@@ -9,9 +9,21 @@
 #define RECOMMENDENGINE_H
 
 #include <iostream>
+#include <map>
 
 #include "indexEngine.h"
 #include "time.h"
+
+typedef pair<std::string,float> PAIR;
+
+// sort  ascending
+struct cmpByValue
+{
+	bool operator()(const PAIR& lhs, const PAIR& rhs)
+	{
+		return lhs.second > rhs.second;
+	}
+};
 
 class recommendEngine
 {
@@ -23,7 +35,7 @@ class recommendEngine
 			void getCandicate(const std::string& userQuery); //get candicate
 			void recommendNoResults(); //
 			void recommendCorrection();
-			void recommend();
+			void recommend(const std::size_t TopK = 5);
 			bool isNeedBuild();
 			void jsonResults(const std::string& userQuery,std::string& res);
 			void buildEngine();

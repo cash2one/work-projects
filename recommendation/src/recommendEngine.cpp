@@ -140,8 +140,57 @@ void recommendEngine::recommendCorrection()
 }
 
 //related query recommendation
-void recommendEngine::recommend()
+void recommendEngine::recommend(const std::size_t TopK)
 {
+	//check
+	if(0 == terms2qIDs_.size() || 0 == queryIdata_.size() || 0 == termsIdMap.size())
+		return;
+
+	vector<std::size_t> qTermsID;
+	vector<std::size_t> termsID;
+	map<std::string,std::size_t> queryScoreMap;
+
+	vector<PAIR> queryScoreVector;
+
+	qTermsID.clear();
+	termsID.clear();
+	queryVector.clear();
+
+	Terms2QidMapIter termsIdIter;
+	String2IntMapIter termsIter;
+	float queryScore = 0.0;
+	std::size_t cnt = 0;
+	std::string queryText = "";
+
+	for(termsIter = termsIdMap.begin(); termsIter != termsIdMap.end(); ++termsIter)
+	{
+		termsID.push_back(termsIter->second);
+	}
+	//caculate score
+	for(termsIdIter = terms2qIDs_.begin(); termsIdIter != terms2qIDs_.end(); ++termsIdIter)
+	{
+		for(std::size_t j = 0; j < termsIdIter->second.size(); ++j)
+		{
+			qTermsID = queryIdata_[termsIdIter->second[j]].tid;
+			Is_subset(termsID,qTermsID,cnt);
+
+			float weight = (float) cnt / (qTermsID.size() + 0.1) ;
+			bigScore = (float) weight * queryIdata_[termsIdIter->second[j]].hits;
+			queryText = queryIdata_[termsIdIter->second[j]].text;
+			queryScoreMap.insert(make_pair(queryText,bigScore));
+		}
+	}
+
+	//get TopK 
+	queryScoreVector(queryScoreMap.begin(),queryScoreMap.end());
+	sort(queryScoreVector.begin(),queryScoreVector.end(),cmpByValue());
+	std::size_t upperBound;
+	if(TopK < queryScoreVector.size())
+		upperBound = TopK;
+	else
+		upperBound = queryScoreVector.size();
+	for(std::size_t i = 0; i < upperBound; ++i)
+		jsonResult += queryScoreVector[i].first;
 }
 
 //build index engine
@@ -171,8 +220,6 @@ void recommendEngine::buildEngine()
 	if(isNeedBuild())
 		indexer_->indexing("query.txt");
 }
-
-
 
 
 bool Is_subset(vector<std::size_t> v1,vector<std::size_t> v2,std::size_t& cnt)
