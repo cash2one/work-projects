@@ -14,6 +14,7 @@
 #include "json/json.h"
 #include "indexEngine.h"
 #include "time.h"
+#include "math.h"
 
 typedef pair<std::string,float> PAIR;
 

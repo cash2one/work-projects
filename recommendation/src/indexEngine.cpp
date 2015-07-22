@@ -68,6 +68,7 @@ bool indexEngine::open()
 	{
 		vector<std::size_t> queryIdVector;
 		std::size_t termID;
+		std::size_t queryID;
 		while(getline(finTermsId,sLine))
 		{
 			queryIdVector.clear();
@@ -89,14 +90,15 @@ bool indexEngine::open()
 				{
 					s = sLine.substr(0,pos);
 					sLine.assign(sLine,pos+1,sLine.length()-1);
-					termID = atoi(s.c_str());
-					queryIdVector.push_back(termID);
+					queryID = atoi(s.c_str());
+					queryIdVector.push_back(queryID);
 				}
 				queryIdVector.push_back(atoi(sLine.c_str()));
 			}
 			terms2qIDs_.insert(make_pair(termID,queryIdVector));
 		}
 	}
+	std::cout << "读入terms的大小：" << terms2qIDs_.size() << std::endl;
 	finTermsId.close();
 	//open query data exist if exist , load data
 	finQueryDat.open(queryDat_pth.c_str());
@@ -171,6 +173,7 @@ bool indexEngine::open()
 	{
 		isNeedflush = true;
 		return false;
+		std::cout << "new file\n";
 	}
 	else 
 		return true; // load dictionary successfully!
@@ -240,7 +243,7 @@ String2IntMap indexEngine::search(const std::string& userQuery,Terms2QidMap& can
 	//get candicate query id
 	for(termsMapIter = termsMap.begin(); termsMapIter != termsMap.end(); ++termsMapIter)
 	{
-		//std::cout << "--test2--"<<termsMapIter->first << "\tid:" << termsMapIter->second << std::endl;
+		std::cout << "--test2--"<<termsMapIter->first << "\tid:" << termsMapIter->second << std::endl;
 		termsQidIter = terms2qIDs_.find(termsMapIter->second);
 		if(terms2qIDs_.end() != termsQidIter)
 		{
@@ -248,7 +251,9 @@ String2IntMap indexEngine::search(const std::string& userQuery,Terms2QidMap& can
 			for(std::size_t i = 0;i < termsQidIter->second.size();++i)
 			{
 				v.push_back(termsQidIter->second[i]);
-			}*/
+				std::cout << "+++++queryid+++++:" <<v[i] <<std::endl;
+			}
+			std::cout << "-------query size:" << v.size() << std::endl;*/
 			candicateQid.insert(make_pair(termsMapIter->second,termsQidIter->second));
 		}
 	}
@@ -264,6 +269,9 @@ String2IntMap indexEngine::search(const std::string& userQuery,Terms2QidMap& can
 				candicateQuery.insert(make_pair(termsQidIter->second[i],queryIter->second));
 		}
 	}
+//	std::cout << "termsmap.size" << termsMap.size() << "\tcandicateqid.size()" 
+//		<< candicateQid.size() <<"\tcandicate query.size()" 
+//		<< candicateQuery.size()<< std::endl;
 
 	return termsMap;
 	}
@@ -280,7 +288,9 @@ void indexEngine::indexing(const std::string& corpus_pth)
 	std::string sData = "";
 	vector<string> splitDat;
 	
-
+/*	std::string queryDat_pth = dict_pth_ + "/queryDat.v";
+	ofstream ofQueryDat;
+	ofQueryDat.open(queryDat_pth.c_str());*/
 	while(getline(ifOrigin_data,sLine))
 	{
 		splitDat.clear();
@@ -335,40 +345,42 @@ void indexEngine::indexing(const std::string& corpus_pth)
 
 		//complete data for one query
 		qDat.tid = termsIdVector;
-		/*
+		
 		 //flush to disk file
-		 ofQueryDat_ << queryID << "\t" <<qDat.text << "\t" << qDat.hits << "\t" << qDat.counts;
+		/* ofQueryDat << queryID << "\t" <<qDat.text << "\t" << qDat.hits << "\t" << qDat.counts;
 		 for(unsigned int i = 0; i < qDat.tid.size(); ++i)
 		 {
-			ofQueryDat_ << "\t" << qDat.tid[i];
+			ofQueryDat << "\t" << qDat.tid[i];
 			//cout << "terms id :" << qDat.tid[i] << ",";
 		 }
-		 ofQueryDat_ << std::endl;
-		*/ 
+		 ofQueryDat << std::endl;*/
+		 
 		
 		//merge the searching times
-		boost::unordered_map<std::size_t,QueryData>::iterator queryIter;
-		queryIter = queryIdata_.find(queryID);
-		if(queryIdata_.end() != queryIter && queryIter->second.text == qDat.text)
-		{
+	//	boost::unordered_map<std::size_t,QueryData>::iterator queryIter;
+	//	queryIter = queryIdata_.find(queryID);
+	//	if(queryIdata_.end() != queryIter && queryIter->second.text == qDat.text)
+	//	{
 			//std::cout << "queryIter->seoncd.text:" << queryIter->second.text << 
 			//	"\t qDat.text:" << qDat.text << std::endl;
 			//std::cout << "queryID:" << queryID << "\tqueryIter->first:" << queryIter->first << std::endl; 
 			//std::cout << "\t text:" << qDat.text << std::endl;	
-			queryIter->second.hits += qDat.hits;
+	//		queryIter->second.hits += qDat.hits;
 			//std::cout  << "test--hits:" << queryIter->second.hits << "\t qdat.hits:" << qDat.hits << std::endl; 	
-		}
-		else
+	//	}
+	//	else
 			queryIdata_.insert(make_pair(queryID,qDat));
 		//queryIdata_.insert(make_pair(queryID,qDat));
 	}
 	ifOrigin_data.close();//file stream close
+	//ofQueryDat.close();
 }
 
 void indexEngine::flush()
 {
-	if(!isNeedflush)
-		return;
+//	if(!isNeedflush)
+//		return;
+	std::cout << "flush to disk\n";
 	ofstream ofTermsId;
 	ofstream ofQueryDat;
 
@@ -405,15 +417,16 @@ void indexEngine::flush()
 		ofTermsId << termsQueryIter->first << "\t";
 		for(unsigned int i = 0; i < termsQueryIter->second.size(); ++i)
 		{
-		//	std::cout << termsQueryIter->second[i] << ",";
+			//std::cout << termsQueryIter->second[i] << ",";
 			ofTermsId << termsQueryIter->second[i] << "\t";
 		}
-		//std::cout << std::endl;
+		std::cout << std::endl;
 		ofTermsId << std::endl;
 	}
 
 	ofTermsId.close();
 	ofQueryDat.close();
+	//std::cout << "test size of quey data:" << queryIdata_.size() << std::endl;
 }
 
 void indexEngine::close()

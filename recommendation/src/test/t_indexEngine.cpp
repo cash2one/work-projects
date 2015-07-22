@@ -19,13 +19,16 @@ int main()
 	mdat.text = "ILOVE YOU";
 	mdat.hits = 12;
 	mdat.counts = 2400;
-	string corpus = "query.txt";
-	//string corpus = "/home/lscm/mproj/workproj/kuaipan/dictionary/corpus/query.txt";
+	//string corpus = "query.txt";
+	string corpus = "/home/lscm/mproj/workproj/kuaipan/dictionary/querylog/201504-05_search_corpus_results.corp";
+	//string corpus = "/home/lscm/mproj/workproj/kuaipan/dictionary/querylog/keyword_20141201_20150131_corpus_results.corp";
+//string corpus = "/home/lscm/mproj/workproj/kuaipan/dictionary/querylog/keyword_20150201_20150331_corpus_results.corp";
+	mIndex.open();
 	mIndex.indexing(corpus);
 	mIndex.insert(mdat);
 	Terms2QidMap termsMap;
 	QueryIdataMap queryMap;
-	mIndex.open();
+	
 	String2IntMap v;
     v = mIndex.search(mdat.text,termsMap,queryMap);
 	mIndex.flush();

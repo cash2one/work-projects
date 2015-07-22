@@ -39,6 +39,10 @@ void recommendEngine::getCandicate(const std::string& userQuery)
 	if(0 == userQuery.length())
 		return;
    termsIdMap = indexer_->search(userQuery,terms2qIDs_,queryIdata_);
+   //std::cout <<"tetst--terms2qIDs size:" << terms2qIDs_.size() << "\t queryIdata size:" 
+	//   << queryIdata_.size()<< std::endl;
+   inputQuery = "";
+   jsonResult.clear();
    inputQuery = userQuery;
 }
 
@@ -60,6 +64,7 @@ void recommendEngine::recommendNoResults()
 	bool subset_flag = false;
 	float bigScore1 = 0.0;
 	float bigScore2 = 0.0;
+
 	std::string res1 = "";
 	std::string res2 = "";
 	std::string big_term = "";
@@ -96,7 +101,9 @@ void recommendEngine::recommendNoResults()
 			else
 			{
 				subset_flag = false;
-				float tscore = (float) weight * qTermsID.size();
+				std::size_t cnt = 0.0;
+				caculateNM(termsID,qTermsID,cnt);
+				float tscore = (float) weight * cnt / (qTermsID.size() + 0.1);
 				if(bigScore2 < tscore)
 				{
 					bigScore2 = tscore;
@@ -126,6 +133,7 @@ void recommendEngine::recommendNoResults()
 	std::cout << "input query:" << jsonResult << std::endl;
 	if(inputQuery == ss)
 		ss = "";
+    
 	jsonResult["NoResult_Recommend"] = ss;
 	std::cout << "the most similar query is :" << ss << "\t biggest score:" << b_score << std::endl;
 }
@@ -161,6 +169,8 @@ void recommendEngine::recommend(const std::size_t TopK)
 	{
 		termsID.push_back(termsIter->second);
 	}
+	float weight = 0.0;
+	float similar = 0.0;
 	//caculate score
 	for(termsIdIter = terms2qIDs_.begin(); termsIdIter != terms2qIDs_.end(); ++termsIdIter)
 	{
@@ -169,8 +179,9 @@ void recommendEngine::recommend(const std::size_t TopK)
 			qTermsID = queryIdata_[termsIdIter->second[j]].tid;
 			caculateNM(termsID,qTermsID,cnt);
 
-			float weight = (float) cnt / (qTermsID.size() + 0.1) ;
-			queryScore = (float) weight * queryIdata_[termsIdIter->second[j]].hits;
+			similar = (float) cnt / (qTermsID.size() + 0.1) ;
+			weight = (float)log(queryIdata_[termsIdIter->second[j]].hits + 2.0)/(qTermsID.size() +0.1);
+			queryScore = (float) weight * similar;
 			queryText = queryIdata_[termsIdIter->second[j]].text;
 			queryScoreMap.insert(make_pair(queryText,queryScore));
 			std::cout << "query:" << queryText <<"\tcontain NM:" << cnt
