@@ -21,7 +21,6 @@ int main(int argc, char* argv[])
 	cout << "Start recommend engine ..." << endl;
 	string pth = "/home/lscm/mproj/workproj/kuaipan/query_recomm_http/q_similar/dict";
 
-	cout << "Start indexing..." << endl;
 	recommendEngine mRecomm(pth,"../");
     //string s = "我的POLO裙子";
 	string s = argv[1];

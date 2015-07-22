@@ -11,6 +11,7 @@
 #include <iostream>
 #include <map>
 
+#include "json/json.h"
 #include "indexEngine.h"
 #include "time.h"
 
@@ -51,8 +52,8 @@ class recommendEngine
 
 			bool isNeedIndex;
 			String2IntMap termsIdMap; //terms ,it's hash value
-			std::string jsonResult;
-
+			Json::Value jsonResult;
+			std::string inputQuery;
 };
 
 

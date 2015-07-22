@@ -7,7 +7,8 @@
  ************************************************************************/
 #include "recommendEngine.h"
 
-bool Is_subset(vector<std::size_t> v1,vector<std::size_t> v2,std::size_t& cnt);
+bool Is_subset(vector<std::size_t> v1,vector<std::size_t> v2);
+void caculateNM(vector<std::size_t> v1,vector<std::size_t> v2,std::size_t& cnt);
 
 
 //construct,and initialize
@@ -16,7 +17,7 @@ recommendEngine::recommendEngine(const std::string& token_dir,const std::string&
 	,dict_pth_(dict_pth)
 	,timestamp_(0)
 	,indexer_(NULL)
-	,jsonResult("")
+	,inputQuery("")
 	,isNeedIndex(false)
 {
 	indexer_ = new indexEngine(token_dir_,dict_pth_); //set token path and dictionary path
@@ -38,7 +39,7 @@ void recommendEngine::getCandicate(const std::string& userQuery)
 	if(0 == userQuery.length())
 		return;
    termsIdMap = indexer_->search(userQuery,terms2qIDs_,queryIdata_);
-   jsonResult = userQuery;
+   inputQuery = userQuery;
 }
 
 //no results recommendation
@@ -62,7 +63,6 @@ void recommendEngine::recommendNoResults()
 	std::string res1 = "";
 	std::string res2 = "";
 	std::string big_term = "";
-	std::size_t cnt = 0;
 
 	for(termsIter = termsIdMap.begin(); termsIter != termsIdMap.end(); ++termsIter)
 	{
@@ -82,7 +82,7 @@ void recommendEngine::recommendNoResults()
 			float weight = (float) queryIdata_[termsIdIter->second[i]].counts / (
 			queryIdata_[termsIdIter->second[i]].hits + (float)0.3*queryIdata_[termsIdIter->second[i]].counts);
 		
-			if(Is_subset(termsID,qTermsID,cnt))
+			if(Is_subset(termsID,qTermsID))
 			{
 				subset_flag = true;
 				float score = (float) weight * qTermsID.size();
@@ -90,8 +90,7 @@ void recommendEngine::recommendNoResults()
 				{
 					bigScore1 = score;  //score
 					res1 = queryIdata_[termsIdIter->second[i]].text; // query
-					std::cout << "contain terms NM:" << cnt
-						<< "\tsubset score:" << bigScore1 << "\t query:" << res1 << std::endl;
+					std::cout << "\tsubset score:" << bigScore1 << "\t query:" << res1 << std::endl;
 				}
 			}
 			else
@@ -125,16 +124,10 @@ void recommendEngine::recommendNoResults()
 	if(ss.length() <= 3 && b_score !=0)
 		ss = big_term;
 	std::cout << "input query:" << jsonResult << std::endl;
-	if(jsonResult == ss)
+	if(inputQuery == ss)
 		ss = "";
-	jsonResult = "{\"recommendation\":{\"";
-	jsonResult = "noresults\":\"";
-	jsonResult += ss;
-	jsonResult += "\",\"";
-	jsonResult += "recommend\":";
-	jsonResult += "\"}";
-	
-	std::cout << "the most similar query is :" << jsonResult << "\t biggest score:" << b_score << std::endl;
+	jsonResult["NoResult_Recommend"] = ss;
+	std::cout << "the most similar query is :" << ss << "\t biggest score:" << b_score << std::endl;
 }
 
 //query correction
@@ -174,13 +167,14 @@ void recommendEngine::recommend(const std::size_t TopK)
 		for(std::size_t j = 0; j < termsIdIter->second.size(); ++j)
 		{
 			qTermsID = queryIdata_[termsIdIter->second[j]].tid;
-			Is_subset(termsID,qTermsID,cnt);
+			caculateNM(termsID,qTermsID,cnt);
 
 			float weight = (float) cnt / (qTermsID.size() + 0.1) ;
 			queryScore = (float) weight * queryIdata_[termsIdIter->second[j]].hits;
 			queryText = queryIdata_[termsIdIter->second[j]].text;
 			queryScoreMap.insert(make_pair(queryText,queryScore));
-			std::cout << "query:" << queryText << "\tscore:" << queryScore << std::endl;
+			std::cout << "query:" << queryText <<"\tcontain NM:" << cnt
+				<<"\tscore:" << queryScore << std::endl;
 		}
 	}
 
@@ -188,12 +182,14 @@ void recommendEngine::recommend(const std::size_t TopK)
     vector<PAIR> queryScoreVector(queryScoreMap.begin(),queryScoreMap.end());
 	sort(queryScoreVector.begin(),queryScoreVector.end(),cmpByValue());
 	std::size_t upperBound;
+	Json::Value recommend;
 	if(TopK < queryScoreVector.size())
 		upperBound = TopK;
 	else
 		upperBound = queryScoreVector.size();
 	for(std::size_t i = 0; i < upperBound; ++i)
-		jsonResult += "," + queryScoreVector[i].first;
+		recommend.append(queryScoreVector[i].first);
+	jsonResult["recommedndation"] = recommend;
 }
 
 //build index engine
@@ -214,9 +210,9 @@ bool recommendEngine::isNeedBuild()
 void recommendEngine::jsonResults(const std::string& userQuery,std::string& res)
 {
 	getCandicate(userQuery);
-	//recommendNoResults();
+	recommendNoResults();
 	recommend();
-	res = jsonResult;
+	res = jsonResult.toStyledString();
 }
 
 void recommendEngine::buildEngine()
@@ -226,13 +222,12 @@ void recommendEngine::buildEngine()
 }
 
 
-bool Is_subset(vector<std::size_t> v1,vector<std::size_t> v2,std::size_t& cnt)
+bool Is_subset(vector<std::size_t> v1,vector<std::size_t> v2)
 {
 	boost::unordered_map<std::size_t,std::size_t> sets;
 	boost::unordered_map<std::size_t,std::size_t>::iterator setIter;
 	sets.clear();
-	cnt = 0;
-	bool flag = true;
+	
 	for(std::size_t i = 0; i < v1.size(); ++i)
 	{
 		sets.insert(make_pair(v1[i],1));
@@ -241,10 +236,24 @@ bool Is_subset(vector<std::size_t> v1,vector<std::size_t> v2,std::size_t& cnt)
 	for(std::size_t j = 0; j < v2.size(); ++j)
 	{
 		setIter = sets.find(v2[j]);
+		if(sets.end() == setIter)
+			return false;
+	}
+	return true;
+}
+
+void caculateNM(vector<std::size_t> v1,vector<std::size_t> v2,std::size_t& cnt)
+{
+	boost::unordered_map<std::size_t,std::size_t> sets;
+	boost::unordered_map<std::size_t,std::size_t>::iterator setIter;
+	sets.clear();
+	cnt = 0;
+	for(std::size_t i = 0; i < v1.size(); ++i)
+		sets.insert(make_pair(v1[i],1));
+	for(std::size_t j = 0; j < v2.size(); ++j)
+	{
+		setIter = sets.find(v2[j]);
 		if(sets.end() != setIter)
 			cnt += 1;
-		else
-			flag = false;
 	}
-	return flag;
 }
