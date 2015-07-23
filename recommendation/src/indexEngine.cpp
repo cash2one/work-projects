@@ -168,15 +168,16 @@ bool indexEngine::open()
 		}
 		
 	}
+	std::cout << "读入query id 的大小:" << queryIdata_.size() << std::endl;
 	finQueryDat.close();
 	if(0 == terms2qIDs_.size() || 0 == queryIdata_.size())
 	{
 		isNeedflush = true;
-		return false;
 		std::cout << "new file\n";
+		return true;
 	}
 	else 
-		return true; // load dictionary successfully!
+		return false; // load dictionary successfully!
 }
 
 void indexEngine::insert(QueryData& userQuery)

@@ -61,7 +61,8 @@ void recommendEngine::recommendNoResults()
 
 	//find biggest score
 	Terms2QidMapIter termsIdIter;
-	bool subset_flag = false;
+	bool subset = false;
+	bool Not_subset = false;
 	float bigScore1 = 0.0;
 	float bigScore2 = 0.0;
 
@@ -86,10 +87,10 @@ void recommendEngine::recommendNoResults()
 			//std::cout << "qTermsID size:" << qTermsID.size() << std::endl;
 			float weight = (float) queryIdata_[termsIdIter->second[i]].counts / (
 			queryIdata_[termsIdIter->second[i]].hits + (float)0.3*queryIdata_[termsIdIter->second[i]].counts);
-		
 			if(Is_subset(termsID,qTermsID))
 			{
-				subset_flag = true;
+				subset = true;
+
 				float score = (float) weight * qTermsID.size();
 				if(bigScore1 < score)
 				{
@@ -100,7 +101,7 @@ void recommendEngine::recommendNoResults()
 			}
 			else
 			{
-				subset_flag = false;
+				Not_subset = true;
 				std::size_t cnt = 0.0;
 				caculateNM(termsID,qTermsID,cnt);
 				float tscore = (float) weight * cnt / (qTermsID.size() + 0.1);
@@ -117,12 +118,12 @@ void recommendEngine::recommendNoResults()
 	//get the most similarity query
 	std::string ss = "";
 	float b_score = 0.0;
-	if(subset_flag)
+	if(subset)
 	{
 		ss = res1;
 		b_score = bigScore1;
 	}
-	else
+	else if(Not_subset)
 	{
 		ss = res2;
 		b_score = bigScore2;
@@ -130,7 +131,7 @@ void recommendEngine::recommendNoResults()
 	//check the suggestion
 	if(ss.length() <= 3 && b_score !=0)
 		ss = big_term;
-	std::cout << "input query:" << jsonResult << std::endl;
+	std::cout << "input query:" << inputQuery << std::endl;
 	if(inputQuery == ss)
 		ss = "";
     
@@ -184,8 +185,8 @@ void recommendEngine::recommend(const std::size_t TopK)
 			queryScore = (float) weight * similar;
 			queryText = queryIdata_[termsIdIter->second[j]].text;
 			queryScoreMap.insert(make_pair(queryText,queryScore));
-			std::cout << "query:" << queryText <<"\tcontain NM:" << cnt
-				<<"\tscore:" << queryScore << std::endl;
+		//	std::cout << "query:" << queryText <<"\tcontain NM:" << cnt
+		//		<<"\tscore:" << queryScore << std::endl;
 		}
 	}
 
@@ -229,14 +230,20 @@ void recommendEngine::jsonResults(const std::string& userQuery,std::string& res)
 void recommendEngine::buildEngine()
 {
 	if(isNeedBuild())
+		
+	{
 		indexer_->indexing("query.txt");
+		indexer_->flush();
+		isNeedIndex = false;
+	}
 }
 
 
 bool Is_subset(vector<std::size_t> v1,vector<std::size_t> v2)
 {
+	if(0 == v1.size() || 0 == v2.size())
+		return false;
 	boost::unordered_map<std::size_t,std::size_t> sets;
-	boost::unordered_map<std::size_t,std::size_t>::iterator setIter;
 	sets.clear();
 	
 	for(std::size_t i = 0; i < v1.size(); ++i)
@@ -246,8 +253,7 @@ bool Is_subset(vector<std::size_t> v1,vector<std::size_t> v2)
 	
 	for(std::size_t j = 0; j < v2.size(); ++j)
 	{
-		setIter = sets.find(v2[j]);
-		if(sets.end() == setIter)
+		if(sets.end() == sets.find(v2[j]))
 			return false;
 	}
 	return true;
@@ -255,16 +261,19 @@ bool Is_subset(vector<std::size_t> v1,vector<std::size_t> v2)
 
 void caculateNM(vector<std::size_t> v1,vector<std::size_t> v2,std::size_t& cnt)
 {
+	if(0 == v1.size() || 0 == v2.size())
+	{
+		cnt = 0;
+		return;
+	}
 	boost::unordered_map<std::size_t,std::size_t> sets;
-	boost::unordered_map<std::size_t,std::size_t>::iterator setIter;
 	sets.clear();
 	cnt = 0;
 	for(std::size_t i = 0; i < v1.size(); ++i)
 		sets.insert(make_pair(v1[i],1));
 	for(std::size_t j = 0; j < v2.size(); ++j)
 	{
-		setIter = sets.find(v2[j]);
-		if(sets.end() != setIter)
+		if(sets.end() != sets.find(v2[j]))
 			cnt += 1;
 	}
 }
