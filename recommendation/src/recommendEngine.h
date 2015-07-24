@@ -39,12 +39,13 @@ class recommendEngine
 			void recommendCorrection();
 			void recommend(const std::size_t TopK = 5);
 			bool isNeedBuild();
+			bool isNeedAdd();
 			void jsonResults(const std::string& userQuery,std::string& res);
 			void buildEngine();
 
 	private:
 			std::string token_dir_;
-			std::string dict_pth_;
+			std::string workdir_;
 			std::size_t timestamp_;
 
 			indexEngine* indexer_;
@@ -55,6 +56,8 @@ class recommendEngine
 			String2IntMap termsIdMap; //terms ,it's hash value
 			Json::Value jsonResult;
 			std::string inputQuery;
+
+			void clear();
 };
 
 

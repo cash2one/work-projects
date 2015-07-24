@@ -18,8 +18,7 @@
 #include <util/hashFunction.h>
 
 #include "knlp/horse_tokenize.h"
-#include "StringUtil.h"
-
+#include "normalize.h"
 
 //using in tokenize ,and assign hash value for terms
 typedef boost::unordered_map<std::string,std::size_t> String2IntMap;
@@ -51,7 +50,7 @@ class indexEngine
 		~indexEngine();
 
 	public:
-		void close();
+		void clear();
 		void insert(QueryData& userQuery); //insert an userQuery
 		String2IntMap search(const std::string& userQuery,Terms2QidMap& candicateQids
 				,QueryIdataMap& candicateQuery);//search query

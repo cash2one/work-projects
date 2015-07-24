@@ -46,6 +46,7 @@ indexEngine::~indexEngine()
 {
 	if(tok_)
 		delete tok_;
+	tok_ = NULL;
 }
 
 bool indexEngine::open()
@@ -231,16 +232,18 @@ String2IntMap indexEngine::search(const std::string& userQuery,Terms2QidMap& can
 		,QueryIdataMap& candicateQuery)
 {
 	//std::cout << "test--\t";
+	std::string nstr = userQuery;
 	if(0 != userQuery.length())
 	{
-	candicateQid.clear();
-	candicateQuery.clear();
+		Normalize::normalize(nstr);
+		candicateQid.clear();
+		candicateQuery.clear();
 
-	String2IntMap termsMap;
-	String2IntMapIter termsMapIter;
+		String2IntMap termsMap;
+		String2IntMapIter termsMapIter;
 
-	tokenTerms(userQuery,termsMap);
-	Terms2QidMapIter termsQidIter;
+		tokenTerms(nstr,termsMap);
+		Terms2QidMapIter termsQidIter;
 	//get candicate query id
 	for(termsMapIter = termsMap.begin(); termsMapIter != termsMap.end(); ++termsMapIter)
 	{
@@ -295,6 +298,9 @@ void indexEngine::indexing(const std::string& corpus_pth)
 	while(getline(ifOrigin_data,sLine))
 	{
 		splitDat.clear();
+		
+		//normalize
+		Normalize::normalize(sLine);
 
 		//get detail data from original corpus
 		for(unsigned int i = 0; i < 3; ++i)
@@ -358,18 +364,18 @@ void indexEngine::indexing(const std::string& corpus_pth)
 		 
 		
 		//merge the searching times
-	//	boost::unordered_map<std::size_t,QueryData>::iterator queryIter;
-	//	queryIter = queryIdata_.find(queryID);
-	//	if(queryIdata_.end() != queryIter && queryIter->second.text == qDat.text)
-	//	{
+		boost::unordered_map<std::size_t,QueryData>::iterator queryIter;
+		queryIter = queryIdata_.find(queryID);
+		if(queryIdata_.end() != queryIter && queryIter->second.text == qDat.text)
+		{
 			//std::cout << "queryIter->seoncd.text:" << queryIter->second.text << 
 			//	"\t qDat.text:" << qDat.text << std::endl;
 			//std::cout << "queryID:" << queryID << "\tqueryIter->first:" << queryIter->first << std::endl; 
 			//std::cout << "\t text:" << qDat.text << std::endl;	
-	//		queryIter->second.hits += qDat.hits;
+			queryIter->second.hits += qDat.hits;
 			//std::cout  << "test--hits:" << queryIter->second.hits << "\t qdat.hits:" << qDat.hits << std::endl; 	
-	//	}
-	//	else
+		}
+		else
 			queryIdata_.insert(make_pair(queryID,qDat));
 		//queryIdata_.insert(make_pair(queryID,qDat));
 	}
@@ -430,9 +436,10 @@ void indexEngine::flush()
 	//std::cout << "test size of quey data:" << queryIdata_.size() << std::endl;
 }
 
-void indexEngine::close()
+void indexEngine::clear()
 {
-	tok_ = NULL;
+	terms2qIDs_.clear();
+	queryIdata_.clear();
 }
 
 bool indexEngine::isUpdate()

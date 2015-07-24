@@ -10,17 +10,43 @@
 bool Is_subset(vector<std::size_t> v1,vector<std::size_t> v2);
 void caculateNM(vector<std::size_t> v1,vector<std::size_t> v2,std::size_t& cnt);
 
+static std::string timestamp = ".RecommendEngineTimestamp";
 
 //construct,and initialize
-recommendEngine::recommendEngine(const std::string& token_dir,const std::string& dict_pth)
+recommendEngine::recommendEngine(const std::string& token_dir,const std::string& workdir)
 	:token_dir_(token_dir)
-	,dict_pth_(dict_pth)
+	,workdir_(workdir)
 	,timestamp_(0)
 	,indexer_(NULL)
 	,inputQuery("")
 	,isNeedIndex(false)
 {
-	indexer_ = new indexEngine(token_dir_,dict_pth_); //set token path and dictionary path
+	//initial dictionary and resoure directory
+	std::string dict = workdir_ + "dict";
+	if(!boost::filesystem::exists(dict + "/dict/"))
+	{
+		boost::filesystem::create_directory(dict + "/dict/");
+	}
+
+	//get timestamp
+	std::string resource = workdir_;
+    resource += "/";
+	resource += "resource";
+	if(!boost::filesystem::exists(resource))
+	{
+		std::cerr << "No original query sources directory!\n";
+	}
+	else
+	{
+		resource += timestamp;
+		std::ifstream in;
+		in.open(resource.c_str(),std::ifstream::in);
+		if(in)
+			in >> timestamp_;
+		in.close();
+	}
+
+	indexer_ = new indexEngine(token_dir_,dict + "/dict/"); //set token path and dictionary path
 	isNeedIndex = indexer_->open();//load dictionary to memory
 }
 
@@ -204,18 +230,37 @@ void recommendEngine::recommend(const std::size_t TopK)
 	jsonResult["recommedndation"] = recommend;
 }
 
+//need add new datas
+bool recommendEngine::isNeedAdd()
+{
+	std::string path = workdir_ + "resource/";
+	path += "newdata.txt";
+	std::size_t mt = boost::filesystem::last_write_time(path);
+	if(mt > timestamp_)
+		return true;
+	else
+		return false;	
+}
+
 //build index engine
 bool recommendEngine::isNeedBuild()
 {
 	//check time
 	std::time_t mt;
-	if(isNeedIndex)
+	if(0 != timestamp_)
+	{
+		mt = time(NULL) - timestamp_;
+		std::cout << "times invertal:" << mt << std::endl;
+	if(isNeedIndex || mt > 100)
 		return true;
 	else
 	{
 		std::cout << "do not need indexing!\n";
 		return false;
 	}
+	}
+	else
+		return true;
 }
 
 //final recommendation results
@@ -227,14 +272,54 @@ void recommendEngine::jsonResults(const std::string& userQuery,std::string& res)
 	res = jsonResult.toStyledString();
 }
 
+void recommendEngine::clear()
+{
+	//clear dictornary in directory
+	std::string dict_dir = workdir_ + "dict/dict/";
+	if(boost::filesystem::exists(dict_dir))
+	{
+		boost::filesystem::remove_all(dict_dir);
+	}
+	boost::filesystem::create_directory(dict_dir);
+
+}
+
 void recommendEngine::buildEngine()
 {
+	std::string Tpth = workdir_ + "resource/";
+	Tpth += timestamp;
+	ofstream out;
+
 	if(isNeedBuild())
 		
 	{
-		indexer_->indexing("query.txt");
+		std::cout << "Build the whole dictonary!\n";
+		std::string pth = workdir_ + "resource/query.txt";
+		indexer_->clear();
+		indexer_->indexing(pth);
+		clear();
 		indexer_->flush();
 		isNeedIndex = false;
+		
+		//update timestamp
+		timestamp_ = time(NULL);
+		out.open(Tpth.c_str(),std::ofstream::out | std::ofstream::trunc);
+		out << timestamp_;
+		out.close();
+	}
+	 if(isNeedAdd())
+	{
+		std::cout << "Add new datas into dictionary!\n";
+		std::string path = workdir_ + "resource/newdata.txt";
+		//indexer_->indexing(path);
+		//indexer_->flush();
+		isNeedIndex = false;
+
+		//update timestamp
+		timestamp_ = time(NULL);
+		out.open(Tpth.c_str(),std::ofstream::out | std::ofstream::trunc);
+		out << timestamp_;
+		out.close();
 	}
 }
 
