@@ -1,0 +1,10 @@
+1.Add a unit test,haven't completed
+
+2.Add a normal test for StringUtil
+
+3.test for index engine,run ./t_indexEngine
+
+4. Test for recommendEngine, run ./t_recommendEngine 我的POLO裙子
+
+5. Test for json, complie
+	g++ t_json.cpp -o t_json -ljson -L /home/lscm/mproj/workproj/github/work-projects/recommendation/include/3third-lib/jsoncpp/lib -I /home/lscm/mproj/workproj/github/work-projects/recommendation/include/3third-lib/jsoncpp/include/
